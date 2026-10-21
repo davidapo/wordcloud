@@ -107,7 +107,7 @@
                         <input type="text" id="question-title-input" value="במילה אחת או שתים: מה החסם העיקרי לחדשנות בארגונים?" 
                             class="text-lg md:text-xl font-bold text-slate-800 w-full border-b border-transparent hover:border-slate-300 focus:border-indigo-500 outline-none transition py-1">
                     </div>
-                    <p class="text-xs text-slate-400 mt-1">מילים לא רלוונטיות (ו', ב', את, של, על, וכו') מסוננות אוטומטית. הגודל משקף את שכיחות התשובה.</p>
+                    <p class="text-xs text-slate-400 mt-1">מילים לא רלוונטיות מסוננות אוטומטית. הגודל משקף את שכיחות התשובה.</p>
                 </div>
                 <div class="flex items-center gap-3 self-end md:self-auto">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
@@ -175,7 +175,7 @@
 
     <!-- QR Code Modal -->
     <div id="qr-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-xl relative animate-in fade-in zoom-in duration-200">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-xl relative">
             <button onclick="closeQRCodeModal()" class="absolute top-4 left-4 text-slate-400 hover:text-slate-600 p-1">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
@@ -201,7 +201,7 @@
     <!-- JavaScript Application Logic -->
     <script>
         let state = {
-            sessionCode: 'gordon-' + Math.floor(1000 + Math.random() * 9000),
+            sessionCode: 'gordon-cloud-session',
             role: 'presenter',
             words: {},
             rawCount: 0,
@@ -211,46 +211,24 @@
 
         let ntfyEventSource = null;
 
-        // Initialize Application
         window.onload = function() {
-            // Check URL parameters cleanly
-            try {
-                if (typeof google !== 'undefined' && google.script && google.script.url) {
-                    google.script.url.getLocation(function(location) {
-                        applyParams(location.parameter);
-                    });
-                } else {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const params = {};
-                    urlParams.forEach((val, key) => params[key] = val);
-                    applyParams(params);
-                }
-            } catch (e) {
-                initPresenter();
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('code')) {
+                state.sessionCode = urlParams.get('code');
             }
-        };
-
-        function applyParams(params) {
-            if (params && params.code) {
-                state.sessionCode = params.code;
-            }
-            if (params && params.role === 'student') {
+            
+            if (urlParams.get('role') === 'student') {
                 state.role = 'student';
                 document.getElementById('presenter-view').classList.add('hidden');
                 document.getElementById('presenter-controls').classList.add('hidden');
                 document.getElementById('student-view').classList.remove('hidden');
             } else {
-                initPresenter();
+                initWordCloudCanvas();
+                setupPubSub();
+                updateStatsUI();
             }
-        }
+        };
 
-        function initPresenter() {
-            initWordCloudCanvas();
-            setupPubSub();
-            updateStatsUI();
-        }
-
-        // Pub/Sub via ntfy.sh
         function setupPubSub() {
             const topic = `wordcloud_${state.sessionCode}`;
             const subscribeUrl = `https://ntfy.sh/${topic}/json`;
@@ -268,11 +246,11 @@
                             processIncomingWord(data.message);
                         }
                     } catch (e) {
-                        console.error(e);
+                        console.error("Error parsing PubSub message:", e);
                     }
                 };
             } catch (err) {
-                console.error("PubSub error:", err);
+                console.error("PubSub connection error:", err);
             }
         }
 
@@ -378,13 +356,11 @@
         }
 
         function showQRCodeModal() {
-            // Build student URL cleanly from the current web app URL
             let baseUrl = window.location.href.split('?')[0];
             const studentUrl = `${baseUrl}?code=${state.sessionCode}&role=student`;
 
             document.getElementById('student-share-link').value = studentUrl;
             
-            // Generate QR code reliably via public QR service
             const qrImg = document.getElementById('qr-image');
             qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(studentUrl)}`;
 
