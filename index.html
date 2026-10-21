@@ -13,7 +13,6 @@
 </head>
 <body class="text-slate-800 m-0 p-0">
 
-    <!-- מסך מרצה -->
     <div id="presenter-view" class="min-h-screen flex flex-col">
         <header class="bg-white border-b border-slate-200 p-4 flex flex-wrap justify-between items-center gap-4 shadow-sm">
             <div class="flex items-center gap-4">
@@ -54,7 +53,6 @@
         </main>
     </div>
 
-    <!-- מסך סטודנט -->
     <div id="student-view" class="hidden min-h-screen items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center border border-slate-200">
             <div class="text-indigo-600 text-4xl mb-4"><i class="fa-solid fa-paper-plane"></i></div>
@@ -76,7 +74,6 @@
         </div>
     </div>
 
-    <!-- חלונות קופצים -->
     <div id="qr-modal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" style="background: rgba(0,0,0,0.6);">
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative">
             <button onclick="closeQR()" class="absolute top-4 left-4 text-slate-400 hover:text-slate-700 text-2xl">
@@ -100,7 +97,7 @@
             <h2 class="text-2xl font-bold mb-4 text-indigo-600"><i class="fa-solid fa-lightbulb"></i> מדריך למרצה</h2>
             <ol class="list-decimal list-inside space-y-4 text-slate-700 leading-relaxed">
                 <li><strong>הזמנת סטודנטים:</strong> לחצו על לחצן ה-QR והציגו אותו על המסך בכיתה.</li>
-                <li><strong>איסוף התשובות:</strong> ברגע שסטודנטים שולחים מילים, הענן יתעדכן בזמן אמת. המערכת חכמה ומאחדת אוטומטית לשון זכר/נקבה ורבים.</li>
+                <li><strong>איסוף התשובות:</strong> ברגע שסטודנטים שולחים מילים, הענן יתעדכן בזמן אמת. האלגוריתם מזהה אוטומטית שורשים משותפים ומאחד אותם.</li>
                 <li><strong>שמירת ענן המילים:</strong> לחצו על "שמור תמונה" להורדת קובץ PNG.</li>
                 <li><strong>שאלה חדשה:</strong> לחצו על "איפוס" כדי לנקות את התשובות בחדר.</li>
             </ol>
@@ -174,15 +171,38 @@
             });
         }
 
-        // פונקציית אלגוריתם הקיצוץ (Stemming) - מזהה את שורש המילה
+        // --- מנוע ה-Stemmer העברי האוטומטי ---
         function getStem(w) {
-            let stem = w;
-            // מוריד קידומות נפוצות אם המילה ארוכה מספיק
-            if (stem.length > 4) stem = stem.replace(/^(וכ|וש|ומ|ול|וה|וב|כ|ש|מ|ל|ה|ב)/, '');
-            // מוריד סיומות ריבוי ונקבה
-            if (stem.length > 3) stem = stem.replace(/(ים|ות|ה|ת)$/, '');
-            // מתקן אותיות סופיות כדי ש'עייף' ו'עייפה' (שקוצץ לעייפ) יקבלו אותו שורש
-            return stem.replace(/ף$/, 'פ').replace(/ץ$/, 'צ').replace(/ך$/, 'כ').replace(/ן$/, 'נ').replace(/ם$/, 'מ');
+            let s = w;
+            if (s.length <= 2) return s;
+
+            // 1. הסרת סיומות ארוכות וקצרות
+            const suffixes = ['יות', 'נות', 'ים', 'ות', 'ון', 'יה', 'ה', 'ת'];
+            for (let suf of suffixes) {
+                if (s.endsWith(suf) && (s.length - suf.length >= 2)) {
+                    s = s.slice(0, -suf.length);
+                    break;
+                }
+            }
+
+            // 2. הסרת תחיליות פעלים ויחס
+            const prefixes = ['וכ', 'וש', 'ומ', 'ול', 'וה', 'וב', 'מת', 'מש', 'כש', 'מ', 'ש', 'ה', 'ב', 'ל', 'כ', 'ו', 'נ'];
+            for (let pref of prefixes) {
+                if (s.startsWith(pref) && (s.length - pref.length >= 2)) {
+                    s = s.slice(pref.length);
+                    break;
+                }
+            }
+
+            // 3. תיקון אותיות סופיות
+            s = s.replace(/ף$/, 'פ').replace(/ץ$/, 'צ').replace(/ך$/, 'כ').replace(/ן$/, 'נ').replace(/ם$/, 'מ');
+
+            // 4. העלמת אותיות אהו"י פנימיות כדי לגשר בין כתיב חסר ומלא (חושש -> חשש)
+            if (s.length > 3) {
+                s = s.replace(/[וי]/g, '');
+            }
+
+            return s;
         }
 
         function fetchWords() {
@@ -194,10 +214,9 @@
                 }
 
                 let groupedData = {};
-                let stemMap = {}; // זוכר איזה מילה מייצגת כל שורש
-                
+                let stemMap = {}; 
                 let rawCounts = {};
-                // שלב איסוף התשובות
+                
                 Object.values(data).forEach(item => {
                     if (item && item.word) {
                         let w = item.word.trim();
@@ -205,25 +224,22 @@
                     }
                 });
                 
-                // שלב איחוד משפחות מילים
+                // שלב האיחוד האוטומטי
                 Object.entries(rawCounts).forEach(([word, count]) => {
                     let stem = getStem(word);
                     
                     if (!stemMap[stem]) {
-                        // אם זה פעם ראשונה שרואים את השורש, נשמור את המילה המקורית שתייצג אותו
                         stemMap[stem] = word;
                         groupedData[word] = count;
                     } else {
-                        // אם השורש כבר קיים, נבדוק איזו מילה קצרה/בסיסית יותר לתצוגה
                         let rep = stemMap[stem];
                         
+                        // בוחרים את המילה הקצרה ביותר לייצג את כל הקבוצה
                         if (word.length < rep.length) {
-                            // המילה החדשה קצרה יותר (למשל 'עצוב' מול 'עצובה'), אז היא תהפוך למייצגת החדשה!
                             groupedData[word] = groupedData[rep] + count;
                             delete groupedData[rep];
                             stemMap[stem] = word;
                         } else {
-                            // המייצגת הקיימת מספיק טובה, נוסיף לה את הספירה
                             groupedData[rep] += count;
                         }
                     }
