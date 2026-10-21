@@ -14,30 +14,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Rubik', sans-serif;
-            background-color: #f8fafc;
-        }
-        .canvas-container {
-            position: relative;
-            width: 100%;
-            height: calc(100vh - 280px);
-            min-height: 400px;
-        }
-        #word-cloud-canvas {
-            width: 100%;
-            height: 100%;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
+        body { font-family: 'Rubik', sans-serif; background-color: #f8fafc; }
+        .canvas-container { position: relative; width: 100%; height: calc(100vh - 280px); min-height: 400px; }
+        #word-cloud-canvas { width: 100%; height: 100%; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
 <body class="h-screen flex flex-col justify-between overflow-x-hidden text-slate-800">
@@ -54,7 +36,6 @@
             </div>
         </div>
 
-        <!-- Controls / Top Bar -->
         <div id="presenter-controls" class="flex flex-wrap items-center gap-3">
             <button onclick="showQRCodeModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium px-4 py-2 rounded-lg transition text-sm flex items-center gap-2">
                 <i class="fa-solid fa-qrcode"></i> הצג QR וקישור
@@ -100,14 +81,13 @@
         <!-- Presenter View Container -->
         <div id="presenter-view" class="flex flex-col gap-4">
             
-            <!-- Question Title Box -->
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div class="flex-1 w-full">
                     <div class="flex items-center gap-2">
                         <input type="text" id="question-title-input" value="במילה אחת או שתים: מה החסם העיקרי לחדשנות בארגונים?" 
                             class="text-lg md:text-xl font-bold text-slate-800 w-full border-b border-transparent hover:border-slate-300 focus:border-indigo-500 outline-none transition py-1">
                     </div>
-                    <p class="text-xs text-slate-400 mt-1">מילים לא רלוונטיות מסוננות אוטומטית. הגודל משקף את שכיחות התשובה.</p>
+                    <p class="text-xs text-slate-400 mt-1">מילים לא רלוונטיות מסוננות אוטומטית.</p>
                 </div>
                 <div class="flex items-center gap-3 self-end md:self-auto">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
@@ -117,10 +97,7 @@
                 </div>
             </div>
 
-            <!-- Main Canvas / Word Cloud Area -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                
-                <!-- Cloud Display Box -->
                 <div class="lg:col-span-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
                     <div class="canvas-container flex items-center justify-center bg-slate-50 rounded-xl border border-slate-100 overflow-hidden" id="cloud-wrapper">
                         <canvas id="word-cloud-canvas"></canvas>
@@ -132,14 +109,12 @@
                     </div>
                 </div>
 
-                <!-- Stats and Quick Word List -->
                 <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
                     <div>
                         <h3 class="text-sm font-bold text-slate-700 mb-3 border-b pb-2 flex justify-between items-center">
                             <span>נתונים בלייב</span>
                             <i class="fa-solid fa-chart-pie text-slate-400"></i>
                         </h3>
-                        
                         <div class="grid grid-cols-2 gap-3 mb-4">
                             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
                                 <span class="block text-2xl font-black text-indigo-600" id="stat-total-count">0</span>
@@ -150,43 +125,27 @@
                                 <span class="text-xs text-slate-500 font-medium">מונחים ייחודיים</span>
                             </div>
                         </div>
-
                         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">מילים מובילות</h4>
                         <div id="words-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar text-sm pl-1">
                             <p class="text-xs text-slate-400 text-center py-4">הרשימה תתעדכן עם הטיפול במילים</p>
                         </div>
                     </div>
-
-                    <!-- Theme Selector -->
-                    <div class="mt-4 pt-3 border-t border-slate-100">
-                        <label class="text-xs font-bold text-slate-500 block mb-2">ערכת צבעים:</label>
-                        <div class="flex gap-2">
-                            <button onclick="setTheme('indigo')" class="w-6 h-6 rounded-full bg-indigo-600 border-2 border-white ring-2 ring-transparent focus:ring-indigo-500"></button>
-                            <button onclick="setTheme('teal')" class="w-6 h-6 rounded-full bg-teal-600 border-2 border-white ring-2 ring-transparent focus:ring-teal-500"></button>
-                            <button onclick="setTheme('amber')" class="w-6 h-6 rounded-full bg-amber-500 border-2 border-white ring-2 ring-transparent focus:ring-amber-500"></button>
-                            <button onclick="setTheme('rose')" class="w-6 h-6 rounded-full bg-rose-500 border-2 border-white ring-2 ring-transparent focus:ring-rose-500"></button>
-                        </div>
-                    </div>
                 </div>
-
             </div>
         </div>
     </main>
 
-    <!-- QR Code Modal -->
+    <!-- Modal -->
     <div id="qr-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-xl relative">
             <button onclick="closeQRCodeModal()" class="absolute top-4 left-4 text-slate-400 hover:text-slate-600 p-1">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
-
             <h3 class="text-lg font-bold text-slate-800 mb-1">הצטרפות לסטודנטים</h3>
             <p class="text-xs text-slate-500 mb-4">סרקו את ה-QR בטלפון או השתמשו בקישור</p>
-
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 inline-block mb-4">
                 <img id="qr-image" src="" alt="QR Code" class="w-48 h-48 mx-auto rounded-lg shadow-sm">
             </div>
-
             <div class="space-y-3">
                 <div class="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
                     <input type="text" id="student-share-link" readonly class="bg-transparent text-xs text-slate-600 px-3 py-2 flex-1 border-none outline-none">
@@ -198,10 +157,8 @@
         </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
     <script>
-        // Set a fixed channel name so all links and QR codes connect instantly
-        const FIXED_TOPIC = "gordon_wordcloud_live";
+        const FIREBASE_DB_URL = "https://wordcloud-f2e69-default-rtdb.europe-west1.firebasedatabase.app";
 
         let state = {
             role: 'presenter',
@@ -211,11 +168,8 @@
             stopWords: new Set(['את', 'של', 'על', 'אל', 'עם', 'מן', 'כי', 'אם', 'גם', 'או', 'זה', 'זו', 'אלה', 'אלו', 'מה', 'מי', 'איך', 'כמה', 'למה', 'שוב', 'עוד', 'רק', 'עד', 'שלנו', 'שלי', 'כמו', 'היה', 'הייתה', 'היו'])
         };
 
-        let ntfyEventSource = null;
-
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
-            
             if (urlParams.get('role') === 'student') {
                 state.role = 'student';
                 document.getElementById('presenter-view').classList.add('hidden');
@@ -223,33 +177,42 @@
                 document.getElementById('student-view').classList.remove('hidden');
             } else {
                 initWordCloudCanvas();
-                setupPubSub();
+                startListeningToFirebase();
                 updateStatsUI();
             }
         };
 
-        function setupPubSub() {
-            const subscribeUrl = `https://ntfy.sh/${FIXED_TOPIC}/json`;
+        function startListeningToFirebase() {
+            fetchFirebaseWords();
+            setInterval(fetchFirebaseWords, 1200);
+        }
 
-            if (ntfyEventSource) {
-                ntfyEventSource.close();
-            }
-
-            try {
-                ntfyEventSource = new EventSource(subscribeUrl);
-                ntfyEventSource.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        if (data.message) {
-                            processIncomingWord(data.message);
-                        }
-                    } catch (e) {
-                        console.error(e);
+        function fetchFirebaseWords() {
+            fetch(`${FIREBASE_DB_URL}/words.json`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data) {
+                        state.words = {};
+                        state.rawCount = 0;
+                        renderWordCloud();
+                        updateStatsUI();
+                        return;
                     }
-                };
-            } catch (err) {
-                console.error(err);
-            }
+                    state.words = {};
+                    state.rawCount = 0;
+                    Object.values(data).forEach(entry => {
+                        if (entry && entry.word) {
+                            let word = entry.word.trim();
+                            if (word && !state.stopWords.has(word.toLowerCase())) {
+                                state.words[word] = (state.words[word] || 0) + 1;
+                                state.rawCount++;
+                            }
+                        }
+                    });
+                    renderWordCloud();
+                    updateStatsUI();
+                })
+                .catch(err => console.error("Firebase fetch error:", err));
         }
 
         function submitWord(e) {
@@ -263,52 +226,34 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> שולח...';
 
-            fetch(`https://ntfy.sh/${FIXED_TOPIC}`, {
+            fetch(`${FIREBASE_DB_URL}/words.json`, {
                 method: 'POST',
-                body: word
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: word, timestamp: Date.now() })
             })
-            .then(res => {
+            .then(() => {
                 input.value = '';
                 document.getElementById('submit-feedback').classList.remove('hidden');
-                setTimeout(() => {
-                    document.getElementById('submit-feedback').classList.add('hidden');
-                }, 3000);
+                setTimeout(() => { document.getElementById('submit-feedback').classList.add('hidden'); }, 3000);
             })
-            .catch(err => {
-                alert('שגיאה בשליחה. אנא נסה שוב.');
-            })
+            .catch(() => alert('שגיאה בשליחה. אנא נסה שוב.'))
             .finally(() => {
                 btn.disabled = false;
                 btn.innerHTML = '<span>שליחה</span> <i class="fa-solid fa-arrow-left"></i>';
             });
         }
 
-        function processIncomingWord(rawText) {
-            let cleaned = rawText.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-            if (!cleaned) return;
-
-            if (state.stopWords.has(cleaned.toLowerCase())) return;
-
-            state.words[cleaned] = (state.words[cleaned] || 0) + 1;
-            state.rawCount++;
-
-            renderWordCloud();
-            updateStatsUI();
-        }
-
         function renderWordCloud() {
             const canvas = document.getElementById('word-cloud-canvas');
             const wrapper = document.getElementById('cloud-wrapper');
             const emptyState = document.getElementById('empty-state');
-
             const list = Object.entries(state.words).map(([text, weight]) => [text, weight]);
 
             if (list.length === 0) {
                 emptyState.classList.remove('hidden');
                 return;
-            } else {
-                emptyState.classList.add('hidden');
             }
+            emptyState.classList.add('hidden');
 
             canvas.width = wrapper.clientWidth;
             canvas.height = wrapper.clientHeight;
@@ -317,13 +262,9 @@
                 WordCloud(canvas, {
                     list: list,
                     gridSize: Math.round(16 * canvas.width / 1024),
-                    weightFactor: function (size) {
-                        return Math.min(size * 22, 90);
-                    },
+                    weightFactor: (size) => Math.min(size * 22, 90),
                     fontFamily: 'Rubik, sans-serif',
-                    color: function () {
-                        return state.themeColors[Math.floor(Math.random() * state.themeColors.length)];
-                    },
+                    color: () => state.themeColors[Math.floor(Math.random() * state.themeColors.length)],
                     rotateRatio: 0,
                     backgroundColor: 'transparent',
                     shrinkToFit: true
@@ -333,8 +274,7 @@
 
         function updateStatsUI() {
             document.getElementById('stat-total-count').innerText = state.rawCount;
-            const uniqueCount = Object.keys(state.words).length;
-            document.getElementById('stat-unique-count').innerText = uniqueCount;
+            document.getElementById('stat-unique-count').innerText = Object.keys(state.words).length;
 
             const listEl = document.getElementById('words-list');
             const sortedWords = Object.entries(state.words).sort((a, b) => b[1] - a[1]);
@@ -357,67 +297,18 @@
             const studentUrl = `${baseUrl}?role=student`;
 
             document.getElementById('student-share-link').value = studentUrl;
-            
-            const qrImg = document.getElementById('qr-image');
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(studentUrl)}`;
-
+            document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(studentUrl)}`;
             document.getElementById('qr-modal').classList.remove('hidden');
         }
 
-        function closeQRCodeModal() {
-            document.getElementById('qr-modal').classList.add('hidden');
-        }
+        function closeQRCodeModal() { document.getElementById('qr-modal').classList.add('hidden'); }
 
         function copyStudentLink() {
             const input = document.getElementById('student-share-link');
             input.select();
-            input.setSelectionRange(0, 99999);
-            try {
-                navigator.clipboard.writeText(input.value);
-            } catch (e) {
-                document.execCommand('copy');
-            }
+            try { navigator.clipboard.writeText(input.value); } catch (e) { document.execCommand('copy'); }
             alert('הקישור לסטודנטים הועתק בהצלחה!');
         }
 
-        function setTheme(theme) {
-            if (theme === 'indigo') state.themeColors = ['#4f46e5', '#4338ca', '#6366f1', '#818cf8'];
-            if (theme === 'teal') state.themeColors = ['#0d9488', '#0f766e', '#14b8a6', '#2dd4bf'];
-            if (theme === 'amber') state.themeColors = ['#d97706', '#b45309', '#f59e0b', '#fbbf24'];
-            if (theme === 'rose') state.themeColors = ['#e11d48', '#be123c', '#f43f5e', '#fb7185'];
-            renderWordCloud();
-        }
-
         function confirmReset() {
-            if (confirm('האם לאפס את כל המילים שנאספו?')) {
-                state.words = {};
-                state.rawCount = 0;
-                renderWordCloud();
-                updateStatsUI();
-            }
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-            }
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.innerText = text;
-            return div.innerHTML;
-        }
-
-        function initWordCloudCanvas() {
-            window.addEventListener('resize', () => {
-                setTimeout(renderWordCloud, 200);
-            });
-        }
-    </script>
-</body>
-</html>
+            if (confirm('האם לאפס את כל המילים
