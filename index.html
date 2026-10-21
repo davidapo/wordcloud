@@ -13,7 +13,12 @@
     <!-- מסך מרצה (מוצג מיד כברירת מחדל) -->
     <div id="presenter-view" class="min-h-screen flex flex-col">
         <header class="bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm">
-            <h1 class="text-2xl font-black text-indigo-600"><i class="fa-solid fa-cloud"></i> ClassCloud</h1>
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-black text-indigo-600"><i class="fa-solid fa-cloud"></i> ClassCloud</h1>
+                <span id="room-id-badge" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold text-sm tracking-wider">
+                    חדר: טוען...
+                </span>
+            </div>
             <div class="flex gap-3">
                 <button onclick="openQR()" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 rounded-lg font-bold flex items-center gap-2">
                     <i class="fa-solid fa-qrcode"></i> הצג QR לסטודנטים
@@ -43,6 +48,7 @@
         <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center border border-slate-200">
             <div class="text-indigo-600 text-4xl mb-4"><i class="fa-solid fa-paper-plane"></i></div>
             <h2 class="text-2xl font-bold mb-2">ClassCloud</h2>
+            <p id="student-room-display" class="text-xs bg-slate-100 text-slate-500 inline-block px-2 py-1 rounded mb-4">חדר: ...</p>
             <p class="text-slate-500 mb-6">הקלידו מילה אחת או שתיים ולחצו על שליחה</p>
             
             <form onsubmit="submitWord(event)">
@@ -76,19 +82,40 @@
     </div>
 
     <script>
-        const FIREBASE_URL = "https://wordcloud-f2e69-default-rtdb.europe-west1.firebasedatabase.app/words.json";
+        // בסיס הכתובת - הקישור הייחודי של החדר יתווסף אליה דינמית
+        const BASE_FIREBASE_URL = "https://wordcloud-f2e69-default-rtdb.europe-west1.firebasedatabase.app/rooms/";
         const STOP_WORDS = new Set(['את','של','על','עם','כל','גם','או','זה','זו','אלה','אלו','מה','מי','איך','כמה','למה','שוב','עוד','רק','עד','כי','אם']);
         
         let wordsData = {};
         let lastDataString = ""; 
+        let roomId = "";
+        let firebaseUrl = "";
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('role') === 'student') {
+            let role = urlParams.get('role');
+            roomId = urlParams.get('room');
+
+            // אם אין מזהה חדר וזה מרצה - נייצר מזהה חדר בן 5 ספרות
+            if (!roomId && role !== 'student') {
+                roomId = Math.floor(10000 + Math.random() * 90000).toString();
+                // נעדכן את שורת הכתובת כדי שאם המרצה ירענן, הוא יישאר באותו חדר
+                window.history.replaceState(null, '', '?room=' + roomId);
+            } else if (!roomId && role === 'student') {
+                alert("חסר מספר חדר. אנא סרוק את קוד ה-QR שוב.");
+                return;
+            }
+
+            // הגדרת הכתובת הספציפית לחדר הזה ב-Firebase
+            firebaseUrl = BASE_FIREBASE_URL + roomId + "/words.json";
+
+            if (role === 'student') {
                 document.getElementById('presenter-view').classList.add('hidden');
                 document.getElementById('student-view').classList.remove('hidden');
                 document.getElementById('student-view').classList.add('flex');
+                document.getElementById('student-room-display').innerText = "חדר: " + roomId;
             } else {
+                document.getElementById('room-id-badge').innerText = "חדר: " + roomId;
                 setInterval(fetchWords, 3000); 
                 window.addEventListener('resize', () => {
                     if(Object.keys(wordsData).length > 0) drawCloud();
@@ -106,7 +133,7 @@
             btn.disabled = true;
             btn.innerText = 'שולח...';
 
-            fetch(FIREBASE_URL, {
+            fetch(firebaseUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ word: word })
@@ -121,7 +148,8 @@
         }
 
         function fetchWords() {
-            fetch(FIREBASE_URL).then(res => res.json()).then(data => {
+            if(!firebaseUrl) return;
+            fetch(firebaseUrl).then(res => res.json()).then(data => {
                 let tempWordsData = {};
                 if (data) {
                     Object.values(data).forEach(item => {
@@ -133,7 +161,6 @@
                 }
                 
                 const newDataString = JSON.stringify(tempWordsData);
-                
                 if (newDataString !== lastDataString) {
                     wordsData = tempWordsData;
                     lastDataString = newDataString;
@@ -163,24 +190,20 @@
                 WordCloud(canvas, {
                     list: list,
                     fontFamily: 'system-ui, -apple-system, sans-serif',
-                    // weightFactor מותאם ומרווח: מקטין קלות את הגודל הכללי כדי להשאיר שטח נשימה
-                    weightFactor: function (size) { 
-                        return size * (canvas.width / 50); 
-                    },
-                    // gridSize מוגדל ל-24: מרווח ביטחון נדיב וברור בין המילים
+                    weightFactor: function (size) { return size * (canvas.width / 50); },
                     gridSize: 24, 
                     color: 'random-dark',
-                    rotateRatio: 0, // המילים יופיעו אופקית בלבד לקריאה מהירה ונוחה
+                    rotateRatio: 0, 
                     backgroundColor: 'transparent',
-                    drawOutOfBound: false, // מונע ממילים לצאת מגבולות המסך
-                    elliptical: true       // יוצר צורה מעוגלת וטבעית יותר לענן
+                    drawOutOfBound: false,
+                    elliptical: true
                 });
             }
         }
 
         function clearCloud() {
-            if(confirm('לאפס את המסך ולמחוק את כל התשובות?')) {
-                fetch(FIREBASE_URL, { method: 'DELETE' }).then(() => { 
+            if(confirm('לאפס את המסך ולמחוק את כל התשובות בחדר זה?')) {
+                fetch(firebaseUrl, { method: 'DELETE' }).then(() => { 
                     wordsData = {}; 
                     lastDataString = "{}"; 
                     drawCloud(); 
@@ -189,7 +212,9 @@
         }
 
         function openQR() {
-            const studentUrl = window.location.href.split('?')[0] + "?role=student";
+            const currentUrl = window.location.href.split('?')[0];
+            const studentUrl = currentUrl + "?role=student&room=" + roomId;
+            
             document.getElementById('share-link').value = studentUrl;
             document.getElementById('qr-image').src = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(studentUrl);
             document.getElementById('qr-modal').classList.remove('hidden');
