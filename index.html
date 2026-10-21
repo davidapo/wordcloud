@@ -200,8 +200,10 @@
 
     <!-- JavaScript Application Logic -->
     <script>
+        // Set a fixed channel name so all links and QR codes connect instantly
+        const FIXED_TOPIC = "gordon_wordcloud_live";
+
         let state = {
-            sessionCode: 'gordon-cloud-session',
             role: 'presenter',
             words: {},
             rawCount: 0,
@@ -213,9 +215,6 @@
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('code')) {
-                state.sessionCode = urlParams.get('code');
-            }
             
             if (urlParams.get('role') === 'student') {
                 state.role = 'student';
@@ -230,8 +229,7 @@
         };
 
         function setupPubSub() {
-            const topic = `wordcloud_${state.sessionCode}`;
-            const subscribeUrl = `https://ntfy.sh/${topic}/json`;
+            const subscribeUrl = `https://ntfy.sh/${FIXED_TOPIC}/json`;
 
             if (ntfyEventSource) {
                 ntfyEventSource.close();
@@ -246,11 +244,11 @@
                             processIncomingWord(data.message);
                         }
                     } catch (e) {
-                        console.error("Error parsing PubSub message:", e);
+                        console.error(e);
                     }
                 };
             } catch (err) {
-                console.error("PubSub connection error:", err);
+                console.error(err);
             }
         }
 
@@ -265,8 +263,7 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> שולח...';
 
-            const topic = `wordcloud_${state.sessionCode}`;
-            fetch(`https://ntfy.sh/${topic}`, {
+            fetch(`https://ntfy.sh/${FIXED_TOPIC}`, {
                 method: 'POST',
                 body: word
             })
@@ -357,7 +354,7 @@
 
         function showQRCodeModal() {
             let baseUrl = window.location.href.split('?')[0];
-            const studentUrl = `${baseUrl}?code=${state.sessionCode}&role=student`;
+            const studentUrl = `${baseUrl}?role=student`;
 
             document.getElementById('student-share-link').value = studentUrl;
             
