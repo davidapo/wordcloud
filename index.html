@@ -10,7 +10,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 m-0 p-0">
 
-    <!-- מסך מרצה (מוצג מיד כברירת מחדל כדי למנוע מסך לבן) -->
+    <!-- מסך מרצה (מוצג מיד כברירת מחדל) -->
     <div id="presenter-view" class="min-h-screen flex flex-col">
         <header class="bg-white border-b border-slate-200 p-4 flex justify-between items-center shadow-sm">
             <h1 class="text-2xl font-black text-indigo-600"><i class="fa-solid fa-cloud"></i> ClassCloud</h1>
@@ -27,7 +27,7 @@
         <main class="flex-1 p-6 flex flex-col">
             <input type="text" value="הקלד/י כאן את השאלה לסטודנטים..." class="text-3xl font-bold bg-transparent border-none outline-none text-center mb-6 w-full text-slate-800">
             <div class="bg-white flex-1 rounded-2xl shadow-sm border border-slate-200 relative flex items-center justify-center p-4">
-                <div id="empty-state" class="absolute text-slate-400 text-center">
+                <div id="empty-state" class="absolute text-slate-400 text-center animate-fade-in">
                     <i class="fa-solid fa-cloud-arrow-up text-6xl mb-4 text-slate-200"></i>
                     <h3 class="text-xl font-bold">המסך מחכה לתשובות...</h3>
                 </div>
@@ -78,7 +78,9 @@
     <script>
         const FIREBASE_URL = "https://wordcloud-f2e69-default-rtdb.europe-west1.firebasedatabase.app/words.json";
         const STOP_WORDS = new Set(['את','של','על','עם','כל','גם','או','זה','זו','אלה','אלו','מה','מי','איך','כמה','למה','שוב','עוד','רק','עד','כי','אם']);
+        
         let wordsData = {};
+        let lastDataString = ""; 
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -87,8 +89,10 @@
                 document.getElementById('student-view').classList.remove('hidden');
                 document.getElementById('student-view').classList.add('flex');
             } else {
-                setInterval(fetchWords, 1500); 
-                window.addEventListener('resize', drawCloud);
+                setInterval(fetchWords, 3000); 
+                window.addEventListener('resize', () => {
+                    if(Object.keys(wordsData).length > 0) drawCloud();
+                });
             }
         };
 
@@ -118,16 +122,23 @@
 
         function fetchWords() {
             fetch(FIREBASE_URL).then(res => res.json()).then(data => {
-                wordsData = {};
+                let tempWordsData = {};
                 if (data) {
                     Object.values(data).forEach(item => {
                         if (item && item.word) {
                             let w = item.word.trim();
-                            if (w && !STOP_WORDS.has(w)) wordsData[w] = (wordsData[w] || 0) + 1;
+                            if (w && !STOP_WORDS.has(w)) tempWordsData[w] = (tempWordsData[w] || 0) + 1;
                         }
                     });
                 }
-                drawCloud();
+                
+                const newDataString = JSON.stringify(tempWordsData);
+                
+                if (newDataString !== lastDataString) {
+                    wordsData = tempWordsData;
+                    lastDataString = newDataString;
+                    drawCloud();
+                }
             }).catch(e => console.log(e));
         }
 
@@ -151,18 +162,29 @@
             if (typeof WordCloud !== 'undefined') {
                 WordCloud(canvas, {
                     list: list,
-                    fontFamily: 'system-ui, sans-serif',
-                    weightFactor: function (size) { return size * (canvas.width / 40); },
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    // weightFactor מותאם ומרווח: מקטין קלות את הגודל הכללי כדי להשאיר שטח נשימה
+                    weightFactor: function (size) { 
+                        return size * (canvas.width / 50); 
+                    },
+                    // gridSize מוגדל ל-24: מרווח ביטחון נדיב וברור בין המילים
+                    gridSize: 24, 
                     color: 'random-dark',
-                    rotateRatio: 0,
-                    backgroundColor: 'transparent'
+                    rotateRatio: 0, // המילים יופיעו אופקית בלבד לקריאה מהירה ונוחה
+                    backgroundColor: 'transparent',
+                    drawOutOfBound: false, // מונע ממילים לצאת מגבולות המסך
+                    elliptical: true       // יוצר צורה מעוגלת וטבעית יותר לענן
                 });
             }
         }
 
         function clearCloud() {
             if(confirm('לאפס את המסך ולמחוק את כל התשובות?')) {
-                fetch(FIREBASE_URL, { method: 'DELETE' }).then(() => { wordsData = {}; drawCloud(); });
+                fetch(FIREBASE_URL, { method: 'DELETE' }).then(() => { 
+                    wordsData = {}; 
+                    lastDataString = "{}"; 
+                    drawCloud(); 
+                });
             }
         }
 
