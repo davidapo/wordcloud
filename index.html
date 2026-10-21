@@ -9,13 +9,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; }
-        .modal-overlay { background: rgba(0,0,0,0.6); }
     </style>
 </head>
 <body class="text-slate-800 m-0 p-0">
 
-    <!-- מסך מרצה (מוצג כברירת מחדל) -->
-    <div id="presenter-view" class="min-h-screen flex flex-col" style="display: none;">
+    <!-- מסך מרצה (מוצג מיד כדי למנוע מסך לבן) -->
+    <div id="presenter-view" class="min-h-screen flex flex-col">
         <header class="bg-white border-b border-slate-200 p-4 flex flex-wrap justify-between items-center gap-4 shadow-sm">
             <div class="flex items-center gap-4">
                 <h1 class="text-2xl font-black text-indigo-600"><i class="fa-solid fa-cloud"></i> ClassCloud</h1>
@@ -56,7 +55,7 @@
     </div>
 
     <!-- מסך סטודנט (מוסתר כברירת מחדל) -->
-    <div id="student-view" style="display: none;" class="min-h-screen items-center justify-center p-4">
+    <div id="student-view" class="hidden min-h-screen items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center border border-slate-200">
             <div class="text-indigo-600 text-4xl mb-4"><i class="fa-solid fa-paper-plane"></i></div>
             <h2 class="text-2xl font-bold mb-2">ClassCloud</h2>
@@ -71,14 +70,14 @@
                 </button>
             </form>
             
-            <div id="success-msg" style="display: none;" class="mt-4 p-3 bg-green-100 text-green-700 rounded-lg font-medium">
+            <div id="success-msg" class="hidden mt-4 p-3 bg-green-100 text-green-700 rounded-lg font-medium">
                 התשובה התקבלה בהצלחה!
             </div>
         </div>
     </div>
 
     <!-- חלון QR קופץ -->
-    <div id="qr-modal" style="display: none;" class="fixed inset-0 z-50 items-center justify-center p-4 modal-overlay">
+    <div id="qr-modal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" style="background: rgba(0,0,0,0.6);">
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative">
             <button onclick="closeQR()" class="absolute top-4 left-4 text-slate-400 hover:text-slate-700 text-2xl">
                 <i class="fa-solid fa-xmark"></i>
@@ -94,7 +93,7 @@
     </div>
 
     <!-- חלון עזרה קופץ -->
-    <div id="help-modal" style="display: none;" class="fixed inset-0 z-50 items-center justify-center p-4 modal-overlay">
+    <div id="help-modal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" style="background: rgba(0,0,0,0.6);">
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-right relative">
             <button onclick="closeHelp()" class="absolute top-4 left-4 text-slate-400 hover:text-slate-700 text-2xl">
                 <i class="fa-solid fa-xmark"></i>
@@ -106,3 +105,194 @@
                 <li><strong>שמירת ענן המילים:</strong> בסיום התרגיל, לחצו על "שמור תמונה" כדי להוריד קובץ PNG נקי של הענן שניתן לשלב במצגות.</li>
                 <li><strong>שאלה חדשה:</strong> לחצו על "איפוס" כדי לנקות את התשובות ולהתחיל שאלה חדשה באותו החדר.</li>
             </ol>
+            <div class="mt-6 text-center">
+                <button onclick="closeHelp()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-6 py-2 rounded-lg">הבנתי, תודה!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_FIREBASE_URL = "https://wordcloud-f2e69-default-rtdb.europe-west1.firebasedatabase.app/rooms/";
+        const STOP_WORDS = new Set(['את','של','על','עם','כל','גם','או','זה','זו','אלה','אלו','מה','מי','איך','כמה','למה','שוב','עוד','רק','עד','כי','אם']);
+        
+        let wordsData = {};
+        let lastDataString = ""; 
+        let roomId = "";
+        let firebaseUrl = "";
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let role = urlParams.get('role');
+            roomId = urlParams.get('room');
+
+            if (!roomId && role !== 'student') {
+                roomId = Math.floor(10000 + Math.random() * 90000).toString();
+                window.history.replaceState(null, '', '?room=' + roomId);
+            } else if (!roomId && role === 'student') {
+                alert("חסר מספר חדר. אנא סרוק את קוד ה-QR שוב.");
+                return;
+            }
+
+            firebaseUrl = BASE_FIREBASE_URL + roomId + "/words.json";
+
+            if (role === 'student') {
+                // העלמת מסך מרצה והצגת סטודנט
+                document.getElementById('presenter-view').classList.add('hidden');
+                document.getElementById('presenter-view').classList.remove('flex');
+                
+                document.getElementById('student-view').classList.remove('hidden');
+                document.getElementById('student-view').classList.add('flex');
+                document.getElementById('student-room-display').innerText = "חדר: " + roomId;
+            } else {
+                // המרצה נשאר במסך הברירת מחדל
+                document.getElementById('room-id-badge').innerText = "חדר: " + roomId;
+                fetchWords();
+                setInterval(fetchWords, 3000); 
+                window.addEventListener('resize', () => {
+                    if(Object.keys(wordsData).length > 0) drawCloud();
+                });
+            }
+        };
+
+        function submitWord(e) {
+            e.preventDefault();
+            const input = document.getElementById('word-input');
+            const btn = document.getElementById('submit-btn');
+            const word = input.value.trim();
+            if (!word) return;
+
+            btn.disabled = true;
+            btn.innerText = 'שולח...';
+
+            fetch(firebaseUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: word })
+            }).then(() => {
+                input.value = '';
+                document.getElementById('success-msg').classList.remove('hidden');
+                setTimeout(() => { document.getElementById('success-msg').classList.add('hidden'); }, 2000);
+            }).finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'שלח/י למסך';
+            });
+        }
+
+        function fetchWords() {
+            if(!firebaseUrl) return;
+            fetch(firebaseUrl).then(res => res.json()).then(data => {
+                let tempWordsData = {};
+                if (data) {
+                    Object.values(data).forEach(item => {
+                        if (item && item.word) {
+                            let w = item.word.trim();
+                            if (w && !STOP_WORDS.has(w)) tempWordsData[w] = (tempWordsData[w] || 0) + 1;
+                        }
+                    });
+                }
+                
+                const newDataString = JSON.stringify(tempWordsData);
+                if (newDataString !== lastDataString) {
+                    wordsData = tempWordsData;
+                    lastDataString = newDataString;
+                    drawCloud();
+                }
+            }).catch(e => console.log(e));
+        }
+
+        function drawCloud() {
+            const list = Object.entries(wordsData).map(([text, weight]) => [text, weight]);
+            const emptyState = document.getElementById('empty-state');
+            const canvas = document.getElementById('cloud-canvas');
+            const container = document.getElementById('canvas-container');
+
+            if (list.length === 0) {
+                emptyState.style.display = 'block';
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+
+            if (typeof WordCloud !== 'undefined') {
+                WordCloud(canvas, {
+                    list: list,
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    weightFactor: function (size) { return size * (canvas.width / 50); },
+                    gridSize: 24, 
+                    color: 'random-dark',
+                    rotateRatio: 0, 
+                    backgroundColor: 'transparent',
+                    drawOutOfBound: false,
+                    elliptical: true
+                });
+            }
+        }
+
+        function clearCloud() {
+            if(confirm('לאפס את המסך ולמחוק את כל התשובות בחדר זה?')) {
+                fetch(firebaseUrl, { method: 'DELETE' }).then(() => { 
+                    wordsData = {}; 
+                    lastDataString = "{}"; 
+                    drawCloud(); 
+                });
+            }
+        }
+
+        function downloadCloud() {
+            if (Object.keys(wordsData).length === 0) {
+                alert("אין עדיין מילים בענן כדי לשמור תמונה.");
+                return;
+            }
+            const originalCanvas = document.getElementById('cloud-canvas');
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = originalCanvas.width;
+            tempCanvas.height = originalCanvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            ctx.drawImage(originalCanvas, 0, 0);
+            
+            const link = document.createElement('a');
+            link.download = `ClassCloud_Room_${roomId}.png`;
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function openQR() {
+            const currentUrl = window.location.href.split('?')[0];
+            const studentUrl = currentUrl + "?role=student&room=" + roomId;
+            document.getElementById('share-link').value = studentUrl;
+            document.getElementById('qr-image').src = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" + encodeURIComponent(studentUrl);
+            document.getElementById('qr-modal').classList.remove('hidden');
+            document.getElementById('qr-modal').classList.add('flex');
+        }
+
+        function closeQR() {
+            document.getElementById('qr-modal').classList.add('hidden');
+            document.getElementById('qr-modal').classList.remove('flex');
+        }
+
+        function openHelp() {
+            document.getElementById('help-modal').classList.remove('hidden');
+            document.getElementById('help-modal').classList.add('flex');
+        }
+
+        function closeHelp() {
+            document.getElementById('help-modal').classList.add('hidden');
+            document.getElementById('help-modal').classList.remove('flex');
+        }
+
+        function copyLink() {
+            const input = document.getElementById('share-link');
+            input.select();
+            document.execCommand('copy');
+            alert('הקישור הועתק בהצלחה ללוח');
+        }
+    </script>
+</body>
+</html>
